@@ -1,0 +1,266 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"proto",
+				"prototype"
+			],
+			[
+				"s",
+				"s"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "index.html",
+			"settings":
+			{
+				"buffer_size": 336,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "var color = function(r, g, b, a){\n    if(a !== undefined){\n        return \"rgba(\" + r + \",\" + g + \",\" + b + \",\" + a + \")\";\n    } else {\n        return \"rgb(\" + r + \",\" + g + \",\" + b + \")\";\n    };\n};\n\nvar DRAW_DELAY = 50;\nvar CLEAR_COLOR = color(0, 0, 0, 0);\nvar STARS = 100;\n\nvar make_interp = function(start, end){\n    return function(i){\n        return Math.floor(start + ((end - start)*i));\n    };\n};\n\nvar DayCycle = function(canvas, duration, update_delay, colors){\n    this.canvas = canvas;\n    this.duration = duration;\n    this.update_delay = update_delay;\n    this.colors = colors;\n    this.color_time = duration / colors.length;\n    this.interp = 0;\n    this.interp_d = 1 / (this.color_time / this.update_delay);\n    this.create_interps();\n    this.stars = this.generate_stars();\n    setInterval(this.update.bind(this), this.update_delay);\n};\n\nDayCycle.prototype.draw = function(ctx){\n    var color_string = this.get_color();\n    set_fill(ctx, color_string);\n    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);\n    for(var i = 0; i < this.stars.length; i++){\n        this.stars[i].draw(ctx);\n    };\n};\n\nDayCycle.prototype.update = function(){\n    this.interp = this.interp_d + this.interp;\n    console.log(\"interp value is:\" + this.interp)\n    if(this.interp >= 1){\n        this.interp = 0;\n        var color_value = this.colors.shift();\n        this.colors.push(color_value);\n        this.create_interps();\n    };\n};\n\nDayCycle.prototype.generate_stars = function(){\n    var star_array = []\n    for(var i = 0; i < STARS; i++){\n        var star = new Star(this.canvas);\n        star_array.push(star);\n    };\n    return star_array;\n};\n\nDayCycle.prototype.create_interps = function() {\n    // get current left-color\n    var first_color = this.colors[0];\n    // get current right-color\n    var next_color = this.colors[1];\n    // make interp function for each color component\n    var r_interp = make_interp(first_color[0], next_color[0]);\n    var g_interp = make_interp(first_color[1], next_color[1]);\n    var b_interp = make_interp(first_color[2], next_color[2]);\n    this.get_color = function() {\n        return color(r_interp(this.interp), g_interp(this.interp), b_interp(this.interp));\n    };\n};\n\nvar Star = function(canvas){\n    this.x = Math.floor(Math.random() * canvas.width+1);\n    this.y = Math.floor(Math.random() * canvas.height+1);\n    this.draw = function(ctx){\n        ctx.fillStyle = \"rgb(242, 221, 84)\";\n        ctx.beginPath();\n        ctx.arc(this.x, this.y, 1, 0, 2*Math.PI);\n        ctx.closePath();\n        ctx.stroke();\n        ctx.fill();\n    };\n};\n\nvar Cloud = function(x, y, dx, dy, radius, stroke, fill){\n    this.x = x;\n    this.y = y;\n    this.dx = dx;\n    this.dy = dy;\n    this.radius = radius;\n    this.width = this.radius*2 + this.radius*.75*2;\n    this.stroke = stroke;\n    this.fill = fill;\n    this.draw = function(ctx){\n        set_fill(ctx, this.stroke, this.fill);\n        draw_circle(ctx, this.x-this.radius, this.y, this.radius*.75);\n        draw_circle(ctx, this.x, this.y, this.radius);\n        draw_circle(ctx, this.x+this.radius, this.y, this.radius*.75);\n\n};\n\nCloud.prototype.move = function(canvas){\n    this.x += this.dx;\n    this.y += this.dy;\n    if(this.x < -(this.width / 2)){\n        this.x = canvas.width + (this.width/2);\n    };\n};\n\n    setInterval(this.move.bind(this), 500);\n};\n\nvar set_stroke = function(ctx, stroke, fill){\n    ctx.strokeStyle = stroke;\n    if(fill !== undefined){\n        ctx.fillStyle = fill;\n    } else {\n        ctx.fillStyle = CLEAR_COLOR;\n    };\n};\n\nvar set_fill = function(ctx, fill, stroke){\n    ctx.fillStyle = fill;\n    if(stroke !== undefined){\n        ctx.strokeStyle = stroke;\n    } else {\n        ctx.strokeStyle = CLEAR_COLOR;\n    };\n};2\n\nvar draw_rect = function(ctx, x, y, width, height){\n    ctx.strokeRect(x, y, width, height);\n    ctx.fillRect(x, y, width, height);\n};\n\nvar draw_circle = function(ctx, x, y, radius){\n    ctx.beginPath();\n    ctx.arc(x, y, radius, 0, 2*Math.PI);\n    ctx.closePath();\n    ctx.stroke();\n    ctx.fill();\n};\n\nvar draw_tri = function(ctx, x, y, size){\n    ctx.beginPath();\n    ctx.moveTo(x, y - size);\n    ctx.lineTo(x + size, y);\n    ctx.lineTo(x - size, y);\n    ctx.closePath();\n    ctx.stroke();\n    ctx.fill();\n};\n\n/*  jQuery ready function. Specify a function to execute when the DOM is fully loaded.  */\n$(document).ready(function () {\n    var canvas = document.getElementById('house');\n    if (canvas.getContext){\n      var ctx = canvas.getContext('2d');\n    };\n\n    //create things\n    var day_cycle = new DayCycle(canvas, 30 * 1000, DRAW_DELAY, [[2, 1, 18], [56, 165, 249]]);\n    var cloud = new Cloud(240, 30, -1, 0, 23, color(171, 204, 204), color(0, 0, 0, 0));\n\n    var draw = function(){\n        ctx.clearRect(0, 0, canvas.width, canvas.height);\n        //background\n        day_cycle.draw(ctx);\n        //housebody\n        set_stroke(ctx, color(102, 45, 42), color(20, 6, 1));\n        draw_rect(ctx, 100, 175, 100, 100);\n        //door\n        set_stroke(ctx, color(102, 45, 42), color(20, 6, 1));\n        draw_rect(ctx, 135, 215, 30, 60);\n        //doorknob\n        set_stroke(ctx, color(102, 45, 42), color(20, 6, 1));\n        draw_circle(ctx, 160, 245, 4);\n        //roof\n        set_stroke(ctx, color(102, 45, 42), color(20, 6, 1));\n        draw_tri(ctx, 150, 175, 50);\n        //grass\n        set_stroke(ctx, color(17, 97, 17), color(1, 20, 1));\n        draw_rect(ctx, 0, 275, 300, 30);\n        //cloud\n        cloud.draw(ctx);\n        cloud.move(canvas);\n    };\n\n    setInterval(draw, DRAW_DELAY);    \n});",
+			"file": "house.js",
+			"file_size": 5563,
+			"file_write_time": 1397095179000000,
+			"settings":
+			{
+				"buffer_size": 5564,
+				"line_ending": "Unix",
+				"name": "var color = function(r, g, b){"
+			}
+		}
+	],
+	"build_system": "",
+	"command_palette":
+	{
+		"height": 54.0,
+		"selected_items":
+		[
+			[
+				"install",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 575.0
+	},
+	"console":
+	{
+		"height": 111.0
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/home/jenca/.config/sublime-text-2/Packages/GoSublime/USAGE.md",
+		"/home/jenca/Documents/lines.html",
+		"/home/jenca/src/number_game/guess.js",
+		"/home/jenca/src/number_game/index.html",
+		"/home/jenca/src/canvas/index.js2",
+		"/home/jenca/src/canvas/index.html",
+		"/home/jenca/src/proj1/assets/css/main.css",
+		"/home/jenca/src/proj1/index.html"
+	],
+	"find":
+	{
+		"height": 0.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"(color",
+			"0",
+			"draw",
+			"/script",
+			"return",
+			"&amp",
+			"&gt",
+			"&lt",
+			"s"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"&",
+			">",
+			"<"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 1,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "index.html",
+					"settings":
+					{
+						"buffer_size": 336,
+						"regions":
+						{
+							"mark":
+							{
+								"flags": 144,
+								"icon": "dot",
+								"regions":
+								[
+								],
+								"scope": "mark"
+							}
+						},
+						"selection":
+						[
+							[
+								81,
+								81
+							]
+						],
+						"settings":
+						{
+							"emax_region_active": false,
+							"syntax": "Packages/Djaneiro/Syntaxes/HTML (Django).tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "house.js",
+					"settings":
+					{
+						"buffer_size": 5564,
+						"regions":
+						{
+							"mark":
+							{
+								"flags": 144,
+								"icon": "dot",
+								"regions":
+								[
+								],
+								"scope": "mark"
+							}
+						},
+						"selection":
+						[
+							[
+								3748,
+								3748
+							]
+						],
+						"settings":
+						{
+							"auto_name": "var color = function(r, g, b){",
+							"emax_region_active": false,
+							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 2147.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 35.0
+	},
+	"input":
+	{
+		"height": 29.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.MarGo-output":
+	{
+		"height": 88.0
+	},
+	"replace":
+	{
+		"height": 64.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"selected_items":
+		[
+		],
+		"width": 380.0
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 150.0,
+	"status_bar_visible": true
+}
